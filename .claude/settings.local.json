@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./mvnw spring-boot:run)",
+      "Bash(npm -v)",
+      "Bash(npm install:*)",
+      "Bash(bash:*)",
+      "WebFetch(domain:woori09.kr)",
+      "Bash(ipconfig getifaddr:*)",
+      "Bash(./mvnw compile:*)",
+      "Skill(update-config)",
+      "Skill(build)",
+      "Skill(review)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.skill' | { read -r skill; printf '{\"systemMessage\":\"🎯 스킬 실행: %s\"}' \"$skill\"; }",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

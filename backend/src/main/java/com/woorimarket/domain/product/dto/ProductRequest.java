@@ -14,5 +14,6 @@ public class ProductRequest {
     private String unit;
 
     private String imageUrl;
+    private String detailImages;
     private String category;
 }

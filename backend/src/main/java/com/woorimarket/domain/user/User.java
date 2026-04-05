@@ -44,7 +44,7 @@ public class User {
     }
 
     public enum Role {
-        SELLER, BUYER
+        SELLER, BUYER, ADMIN
     }
 
     public enum AuthProvider {

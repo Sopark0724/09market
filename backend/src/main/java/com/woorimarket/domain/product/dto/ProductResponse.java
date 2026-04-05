@@ -12,6 +12,7 @@ public class ProductResponse {
     private String description;
     private String unit;
     private String imageUrl;
+    private String detailImages;
     private String category;
     private Boolean active;
     private Long storeId;
@@ -23,6 +24,7 @@ public class ProductResponse {
                 .description(product.getDescription())
                 .unit(product.getUnit())
                 .imageUrl(product.getImageUrl())
+                .detailImages(product.getDetailImages())
                 .category(product.getCategory())
                 .active(product.getActive())
                 .storeId(product.getStore().getId())

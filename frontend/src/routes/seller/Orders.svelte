@@ -8,6 +8,7 @@
   let loading = true;
   let error = '';
   let selectedDate = '';
+  let phoneSearch = '';
 
   onMount(loadOrders);
 
@@ -15,7 +16,10 @@
     loading = true;
     error = '';
     try {
-      const query = selectedDate ? `?date=${selectedDate}` : '';
+      const params = [];
+      if (selectedDate) params.push(`date=${selectedDate}`);
+      if (phoneSearch) params.push(`phone=${phoneSearch}`);
+      const query = params.length > 0 ? `?${params.join('&')}` : '';
       orders = await api.get(`/seller/orders${query}`);
     } catch (e) {
       error = e.message;
@@ -32,7 +36,7 @@
     switch (status) {
       case 'PENDING': return '대기';
       case 'CONFIRMED': return '확인';
-      case 'COMPLETED': return '완료';
+      case 'COMPLETED': return '픽업완료';
       case 'CANCELLED': return '취소';
       default: return status;
     }
@@ -52,6 +56,17 @@
     if (!dt) return '-';
     return new Date(dt).toLocaleString('ko-KR');
   }
+
+  async function completeOrder(orderId) {
+    if (!confirm('픽업 완료 처리하시겠습니까?')) return;
+    error = '';
+    try {
+      await api.put(`/seller/orders/${orderId}/complete`);
+      await loadOrders();
+    } catch (e) {
+      error = e.message;
+    }
+  }
 </script>
 
 <div class="container">
@@ -65,10 +80,16 @@
     <div class="filter-row">
       <div class="form-group" style="margin-bottom:0">
         <label>날짜별 조회</label>
-        <input type="date" class="form-control" bind:value={selectedDate} style="width:200px">
+        <input type="date" class="form-control" bind:value={selectedDate} style="width:160px">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label>핸드폰 뒷번호</label>
+        <input type="text" class="form-control" bind:value={phoneSearch}
+               placeholder="예: 2222" maxlength="4" style="width:120px"
+               on:keypress={(e) => { if (e.key === 'Enter') loadOrders(); }}>
       </div>
       <button class="btn btn-primary" on:click={loadOrders}>조회</button>
-      <button class="btn btn-outline" on:click={() => { selectedDate = ''; loadOrders(); }}>전체보기</button>
+      <button class="btn btn-outline" on:click={() => { selectedDate = ''; phoneSearch = ''; loadOrders(); }}>초기화</button>
     </div>
   </div>
 
@@ -119,8 +140,13 @@
           </tbody>
         </table>
 
-        <div class="order-total">
-          합계: <strong>{formatPrice(order.totalAmount)}원</strong>
+        <div class="order-footer">
+          <div class="order-total">
+            합계: <strong>{formatPrice(order.totalAmount)}원</strong>
+          </div>
+          {#if order.status === 'CONFIRMED' || order.status === 'PENDING'}
+            <button class="btn btn-sm btn-success" on:click={() => completeOrder(order.id)}>픽업 완료</button>
+          {/if}
         </div>
       </div>
     {/each}
@@ -174,17 +200,50 @@
     border-radius: 8px;
   }
 
-  .order-total {
-    text-align: right;
-    font-size: 16px;
+  .order-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding-top: 12px;
     border-top: 2px solid #eee;
     margin-top: 12px;
+  }
+
+  .order-total {
+    font-size: 16px;
   }
 
   .empty {
     text-align: center;
     padding: 48px;
     color: #999;
+  }
+
+  @media (max-width: 640px) {
+    .filter-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .filter-row input {
+      width: 100% !important;
+    }
+
+    .order-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .order-buyer {
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    :global(.table) {
+      display: block;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
   }
 </style>

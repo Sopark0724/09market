@@ -18,11 +18,24 @@
   let error = '';
   let success = '';
   let isEdit = false;
+  let storeId = null;
+  let linkCopied = false;
+
+  $: buyerLink = storeId ? `${window.location.origin}/#/buyer/store/${storeId}` : '';
+
+  function copyLink() {
+    if (!buyerLink) return;
+    navigator.clipboard.writeText(buyerLink).then(() => {
+      linkCopied = true;
+      setTimeout(() => linkCopied = false, 2000);
+    });
+  }
 
   onMount(async () => {
     loading = true;
     try {
       const store = await api.get('/seller/store');
+      storeId = store.id;
       form = {
         storeName: store.storeName || '',
         address: store.address || '',
@@ -73,6 +86,19 @@
       <div class="alert alert-success">{success}</div>
     {/if}
 
+    {#if isEdit && buyerLink}
+      <div class="card link-card">
+        <h3>구매자 주문 링크</h3>
+        <p class="link-desc">아래 링크를 채팅방에 공유하면 구매자가 바로 주문할 수 있습니다.</p>
+        <div class="link-row">
+          <input type="text" class="form-control link-input" value={buyerLink} readonly>
+          <button class="btn btn-primary btn-sm" on:click={copyLink}>
+            {linkCopied ? '복사됨!' : '복사'}
+          </button>
+        </div>
+      </div>
+    {/if}
+
     <div class="card">
       <h3>{isEdit ? '매장 정보 수정' : '매장 등록'}</h3>
 
@@ -118,5 +144,34 @@
   h3 {
     margin-bottom: 20px;
     color: #2c3e50;
+  }
+
+  .link-card {
+    border: 2px solid #2d8cf0;
+    background: #f0f7ff;
+  }
+
+  .link-desc {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 12px;
+  }
+
+  .link-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .link-input {
+    flex: 1;
+    background: white;
+    font-size: 13px;
+    color: #2d8cf0;
+  }
+
+  @media (max-width: 640px) {
+    .link-row {
+      flex-direction: column;
+    }
   }
 </style>

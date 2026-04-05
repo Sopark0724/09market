@@ -14,6 +14,9 @@ public class InventoryResponse {
     private String productName;
     private String unit;
     private String category;
+    private String imageUrl;
+    private String detailImages;
+    private String description;
     private LocalDate availableDate;
     private BigDecimal price;
     private Integer stockQuantity;
@@ -27,6 +30,9 @@ public class InventoryResponse {
                 .productName(inv.getProduct().getName())
                 .unit(inv.getProduct().getUnit())
                 .category(inv.getProduct().getCategory())
+                .imageUrl(inv.getProduct().getImageUrl())
+                .detailImages(inv.getProduct().getDetailImages())
+                .description(inv.getProduct().getDescription())
                 .availableDate(inv.getAvailableDate())
                 .price(inv.getPrice())
                 .stockQuantity(inv.getStockQuantity())

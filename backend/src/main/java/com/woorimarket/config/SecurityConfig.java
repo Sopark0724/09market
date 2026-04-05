@@ -39,9 +39,11 @@ public class SecurityConfig {
             .authorizeRequests()
                 .antMatchers("/api/auth/**").permitAll()
                 .antMatchers("/h2-console/**").permitAll()
+                .antMatchers("/uploads/**").permitAll()
                 .antMatchers(HttpMethod.GET, "/api/buyer/stores/**").permitAll()
-                .antMatchers("/api/seller/**").hasRole("SELLER")
-                .antMatchers("/api/buyer/**").hasRole("BUYER")
+                .antMatchers("/api/admin/**").hasRole("ADMIN")
+                .antMatchers("/api/seller/**").hasAnyRole("SELLER", "ADMIN")
+                .antMatchers("/api/buyer/**").hasAnyRole("BUYER", "ADMIN")
                 .anyRequest().authenticated()
             .and()
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -52,7 +54,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000"));
+        configuration.setAllowedOriginPatterns(List.of("*"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

@@ -22,7 +22,7 @@ public class ProductInventory {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    @Column(nullable = false)
+    @Column(name = "available_date", nullable = false)
     private LocalDate availableDate;
 
     @Column(nullable = false, precision = 10, scale = 0)

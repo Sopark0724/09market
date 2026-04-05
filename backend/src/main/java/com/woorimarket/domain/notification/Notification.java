@@ -28,7 +28,7 @@ public class Notification {
     @Column(nullable = false)
     private NotificationChannel channel;
 
-    @Column(nullable = false, length = 1000)
+    @Column(nullable = false, length = 2000)
     private String message;
 
     private LocalDateTime sentAt;

@@ -92,8 +92,16 @@ public class SellerController {
     @GetMapping("/orders")
     public ResponseEntity<List<OrderResponse>> getOrders(
             @AuthenticationPrincipal User user,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return ResponseEntity.ok(orderService.getSellerOrders(user.getId(), date));
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) String phone) {
+        return ResponseEntity.ok(orderService.getSellerOrders(user.getId(), date, phone));
+    }
+
+    @PutMapping("/orders/{id}/complete")
+    public ResponseEntity<OrderResponse> completeOrder(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(orderService.completeOrder(id, user.getId()));
     }
 
     // === 통계 ===
@@ -106,5 +114,12 @@ public class SellerController {
         if (startDate == null) startDate = LocalDate.now().minusDays(30);
         if (endDate == null) endDate = LocalDate.now();
         return ResponseEntity.ok(orderService.getSellerStats(user.getId(), startDate, endDate));
+    }
+
+    @GetMapping("/stats/daily")
+    public ResponseEntity<Map<String, Object>> getDailyStats(
+            @AuthenticationPrincipal User user,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(orderService.getSellerDailyStats(user.getId(), date));
     }
 }

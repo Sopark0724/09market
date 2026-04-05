@@ -26,3 +26,4 @@ export const user = createAuthStore();
 export const isLoggedIn = derived(user, $user => !!$user);
 export const isSeller = derived(user, $user => $user?.role === 'SELLER');
 export const isBuyer = derived(user, $user => $user?.role === 'BUYER');
+export const isAdmin = derived(user, $user => $user?.role === 'ADMIN');

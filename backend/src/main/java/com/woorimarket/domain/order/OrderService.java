@@ -77,9 +77,11 @@ public class OrderService {
         order = orderRepository.save(order);
 
         // 알림 발송
-        notificationService.sendOrderNotification(buyer, store.getUser(), order);
+        String notificationMessage = notificationService.sendOrderNotification(buyer, store.getUser(), order);
 
-        return OrderResponse.from(order);
+        OrderResponse response = OrderResponse.from(order);
+        response.setNotificationMessage(notificationMessage);
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -102,8 +104,56 @@ public class OrderService {
         return OrderResponse.from(order);
     }
 
+    public OrderResponse completeOrder(Long orderId, Long sellerId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
+
+        if (!order.getStore().getUser().getId().equals(sellerId)) {
+            throw new IllegalStateException("완료 처리 권한이 없습니다.");
+        }
+
+        if (order.getStatus() == Order.OrderStatus.CANCELLED) {
+            throw new IllegalStateException("취소된 주문은 완료 처리할 수 없습니다.");
+        }
+
+        order.setStatus(Order.OrderStatus.COMPLETED);
+        order = orderRepository.save(order);
+        return OrderResponse.from(order);
+    }
+
+    public OrderResponse cancelOrder(Long orderId, Long buyerId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
+
+        if (!order.getBuyer().getId().equals(buyerId)) {
+            throw new IllegalStateException("취소 권한이 없습니다.");
+        }
+
+        if (order.getStatus() == Order.OrderStatus.CANCELLED) {
+            throw new IllegalStateException("이미 취소된 주문입니다.");
+        }
+
+        if (order.getStatus() == Order.OrderStatus.COMPLETED) {
+            throw new IllegalStateException("완료된 주문은 취소할 수 없습니다.");
+        }
+
+        // 재고 복원
+        for (OrderItem item : order.getItems()) {
+            ProductInventory inventory = item.getProductInventory();
+            inventory.setRemainingQuantity(inventory.getRemainingQuantity() + item.getQuantity());
+            if (inventory.getStatus() == ProductInventory.InventoryStatus.SOLD_OUT) {
+                inventory.setStatus(ProductInventory.InventoryStatus.AVAILABLE);
+            }
+            inventoryRepository.save(inventory);
+        }
+
+        order.setStatus(Order.OrderStatus.CANCELLED);
+        order = orderRepository.save(order);
+        return OrderResponse.from(order);
+    }
+
     @Transactional(readOnly = true)
-    public List<OrderResponse> getSellerOrders(Long sellerId, LocalDate date) {
+    public List<OrderResponse> getSellerOrders(Long sellerId, LocalDate date, String phone) {
         Store store = storeRepository.findByUserId(sellerId)
                 .orElseThrow(() -> new IllegalStateException("매장 정보가 없습니다."));
 
@@ -112,6 +162,13 @@ public class OrderService {
             orders = orderRepository.findByStoreIdAndOrderDate(store.getId(), date);
         } else {
             orders = orderRepository.findByStoreIdOrderByCreatedAtDesc(store.getId());
+        }
+
+        // 핸드폰 뒷번호 필터링
+        if (phone != null && !phone.isEmpty()) {
+            orders = orders.stream()
+                    .filter(o -> o.getBuyer().getPhone() != null && o.getBuyer().getPhone().endsWith(phone))
+                    .collect(Collectors.toList());
         }
 
         return orders.stream()
@@ -155,18 +212,93 @@ public class OrderService {
         stats.put("dailyRevenue", dailyRevenue);
         stats.put("dailyOrderCount", dailyOrderCount);
 
-        // 상품별 판매량
+        // 상품별 판매량 + 판매금액
         Map<String, Integer> productSales = new HashMap<>();
+        Map<String, BigDecimal> productRevenue = new HashMap<>();
         for (Order order : orders) {
             if (order.getStatus() != Order.OrderStatus.CANCELLED) {
                 for (OrderItem item : order.getItems()) {
                     String productName = item.getProductInventory().getProduct().getName();
                     productSales.merge(productName, item.getQuantity(), Integer::sum);
+                    productRevenue.merge(productName, item.getSubtotal(), BigDecimal::add);
                 }
             }
         }
         stats.put("productSales", productSales);
+        stats.put("productRevenue", productRevenue);
 
         return stats;
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getSellerDailyStats(Long sellerId, LocalDate date) {
+        Store store = storeRepository.findByUserId(sellerId)
+                .orElseThrow(() -> new IllegalStateException("매장 정보가 없습니다."));
+
+        List<Order> orders = orderRepository.findByStoreIdAndOrderDate(store.getId(), date);
+
+        Map<String, Object> result = new HashMap<>();
+
+        BigDecimal totalRevenue = BigDecimal.ZERO;
+        int totalOrders = 0;
+
+        List<Map<String, Object>> productDetails = new ArrayList<>();
+        // productId -> aggregated info
+        Map<Long, Map<String, Object>> productMap = new LinkedHashMap<>();
+
+        for (Order order : orders) {
+            if (order.getStatus() == Order.OrderStatus.CANCELLED) continue;
+            totalRevenue = totalRevenue.add(order.getTotalAmount());
+            totalOrders++;
+
+            for (OrderItem item : order.getItems()) {
+                Long productId = item.getProductInventory().getProduct().getId();
+                Map<String, Object> pm = productMap.computeIfAbsent(productId, k -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("productId", productId);
+                    m.put("productName", item.getProductInventory().getProduct().getName());
+                    m.put("unit", item.getProductInventory().getProduct().getUnit());
+                    m.put("category", item.getProductInventory().getProduct().getCategory());
+                    m.put("unitPrice", item.getUnitPrice());
+                    m.put("stockQuantity", 0);
+                    m.put("soldQuantity", 0);
+                    m.put("revenue", BigDecimal.ZERO);
+                    return m;
+                });
+                pm.put("soldQuantity", (int) pm.get("soldQuantity") + item.getQuantity());
+                pm.put("revenue", ((BigDecimal) pm.get("revenue")).add(item.getSubtotal()));
+            }
+        }
+
+        // 해당 날짜의 재고 정보도 포함
+        List<com.woorimarket.domain.product.ProductInventory> inventories =
+                inventoryRepository.findAvailableByStoreAndDate(store.getId(), date);
+        // 재고 날짜 기준으로 전체 재고도 조회 (SOLD_OUT 포함)
+        List<com.woorimarket.domain.product.ProductInventory> allInventories =
+                inventoryRepository.findByStoreAndDateRange(store.getId(), date, date);
+
+        for (com.woorimarket.domain.product.ProductInventory inv : allInventories) {
+            Long productId = inv.getProduct().getId();
+            Map<String, Object> pm = productMap.computeIfAbsent(productId, k -> {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("productId", productId);
+                m.put("productName", inv.getProduct().getName());
+                m.put("unit", inv.getProduct().getUnit());
+                m.put("category", inv.getProduct().getCategory());
+                m.put("unitPrice", inv.getPrice());
+                m.put("stockQuantity", 0);
+                m.put("soldQuantity", 0);
+                m.put("revenue", BigDecimal.ZERO);
+                return m;
+            });
+            pm.put("stockQuantity", (int) pm.get("stockQuantity") + inv.getStockQuantity());
+        }
+
+        result.put("date", date);
+        result.put("totalRevenue", totalRevenue);
+        result.put("totalOrders", totalOrders);
+        result.put("products", new ArrayList<>(productMap.values()));
+
+        return result;
     }
 }

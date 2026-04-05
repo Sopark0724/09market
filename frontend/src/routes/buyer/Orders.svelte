@@ -26,7 +26,7 @@
     switch (status) {
       case 'PENDING': return '대기중';
       case 'CONFIRMED': return '주문확인';
-      case 'COMPLETED': return '완료';
+      case 'COMPLETED': return '픽업완료';
       case 'CANCELLED': return '취소됨';
       default: return status;
     }
@@ -45,6 +45,17 @@
   function formatDateTime(dt) {
     if (!dt) return '-';
     return new Date(dt).toLocaleString('ko-KR');
+  }
+
+  async function cancelOrder(orderId) {
+    if (!confirm('주문을 취소하시겠습니까?')) return;
+    error = '';
+    try {
+      await api.put(`/buyer/orders/${orderId}/cancel`);
+      orders = await api.get('/buyer/orders');
+    } catch (e) {
+      error = e.message;
+    }
   }
 </script>
 
@@ -90,8 +101,13 @@
           {/each}
         </div>
 
-        <div class="order-total">
-          합계: <strong>{formatPrice(order.totalAmount)}원</strong>
+        <div class="order-footer">
+          <div class="order-total">
+            합계: <strong>{formatPrice(order.totalAmount)}원</strong>
+          </div>
+          {#if order.status !== 'CANCELLED' && order.status !== 'COMPLETED'}
+            <button class="btn btn-sm btn-danger" on:click={() => cancelOrder(order.id)}>주문 취소</button>
+          {/if}
         </div>
       </div>
     {/each}
@@ -164,12 +180,17 @@
     text-align: right;
   }
 
-  .order-total {
-    text-align: right;
-    font-size: 16px;
+  .order-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding-top: 12px;
     border-top: 2px solid #eee;
     margin-top: 12px;
+  }
+
+  .order-total {
+    font-size: 16px;
   }
 
   .empty {
@@ -180,5 +201,30 @@
 
   .empty p {
     margin-bottom: 16px;
+  }
+
+  @media (max-width: 640px) {
+    .order-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .order-meta {
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .order-item-row {
+      flex-wrap: wrap;
+    }
+
+    .item-detail {
+      margin: 0;
+    }
+
+    .item-price {
+      min-width: auto;
+    }
   }
 </style>

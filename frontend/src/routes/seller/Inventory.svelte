@@ -256,4 +256,30 @@
     padding: 48px;
     color: #999;
   }
+
+  @media (max-width: 640px) {
+    .bulk-row {
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .bulk-row select {
+      grid-column: 1 / -1;
+    }
+
+    :global(.table) {
+      display: block;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .date-selector {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .date-selector input {
+      width: 100% !important;
+    }
+  }
 </style>

@@ -2,8 +2,12 @@
   export let navigate;
   import { isLoggedIn, isSeller } from '../stores/auth.js';
 
+  import { isAdmin } from '../stores/auth.js';
+
   $: if ($isLoggedIn) {
-    navigate($isSeller ? '#/seller/dashboard' : '#/buyer/stores');
+    if ($isAdmin) navigate('#/admin/dashboard');
+    else if ($isSeller) navigate('#/seller/dashboard');
+    else navigate('#/buyer/orders');
   }
 </script>
 
@@ -36,7 +40,7 @@
           </ul>
         </div>
         <div class="feature-card">
-          <div class="feature-icon">����</div>
+          <div class="feature-icon">🛒</div>
           <h3>구매자</h3>
           <p>원하는 날짜에 신선한 농산물을 편리하게 주문하세요.</p>
           <ul>
@@ -132,5 +136,32 @@
     content: '✓ ';
     color: #19be6b;
     font-weight: bold;
+  }
+
+  @media (max-width: 640px) {
+    .hero {
+      padding: 48px 16px;
+    }
+
+    .hero h1 {
+      font-size: 28px;
+    }
+
+    .hero-sub {
+      font-size: 15px;
+    }
+
+    .section-title {
+      font-size: 22px;
+    }
+
+    .feature-grid {
+      grid-template-columns: 1fr;
+      padding: 0 12px;
+    }
+
+    .feature-card {
+      padding: 24px;
+    }
   }
 </style>

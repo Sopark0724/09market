@@ -1,5 +1,5 @@
 <script>
-  import { user, isLoggedIn, isSeller, isBuyer } from './stores/auth.js';
+  import { user, isLoggedIn, isSeller, isBuyer, isAdmin } from './stores/auth.js';
   import { cartItemCount } from './stores/cart.js';
   import Login from './routes/auth/Login.svelte';
   import Register from './routes/auth/Register.svelte';
@@ -8,17 +8,20 @@
   import SellerProducts from './routes/seller/Products.svelte';
   import SellerInventory from './routes/seller/Inventory.svelte';
   import SellerOrders from './routes/seller/Orders.svelte';
-  import BuyerStores from './routes/buyer/Stores.svelte';
+  import AdminDashboard from './routes/admin/Dashboard.svelte';
+  import AdminStores from './routes/buyer/Stores.svelte';
   import BuyerStoreDetail from './routes/buyer/StoreDetail.svelte';
   import BuyerCart from './routes/buyer/Cart.svelte';
   import BuyerOrders from './routes/buyer/Orders.svelte';
   import Landing from './routes/Landing.svelte';
 
   let currentHash = window.location.hash || '#/';
+  let mobileMenuOpen = false;
 
   function navigate(hash) {
     window.location.hash = hash;
     currentHash = hash;
+    mobileMenuOpen = false;
   }
 
   window.addEventListener('hashchange', () => {
@@ -30,29 +33,53 @@
     navigate('#/');
   }
 
+  function toggleMenu() {
+    mobileMenuOpen = !mobileMenuOpen;
+  }
+
   $: route = currentHash.split('?')[0];
   $: params = new URLSearchParams(currentHash.includes('?') ? currentHash.split('?')[1] : '');
+
+  // 구매자가 매장 링크로 접근한 경우 로고 클릭 시 해당 매장으로 이동
+  let buyerStoreRoute = '';
+  $: if (route.startsWith('#/buyer/store/')) {
+    buyerStoreRoute = route;
+  }
+
+  function logoClick() {
+    if (buyerStoreRoute && (!$isLoggedIn || $isBuyer)) {
+      navigate(buyerStoreRoute);
+    } else {
+      navigate('#/');
+    }
+  }
 </script>
 
 <div class="app">
   <!-- Header -->
   <header class="header">
     <div class="header-content">
-      <a href="#/" class="logo" on:click|preventDefault={() => navigate('#/')}>
+      <a href="#/" class="logo" on:click|preventDefault={logoClick}>
         <span class="logo-icon">🥬</span>
         <span class="logo-text">우리마켓</span>
       </a>
 
-      <nav class="nav">
+      {#if $isLoggedIn}
+        <button class="menu-toggle" on:click={toggleMenu}>☰</button>
+      {/if}
+
+      <nav class="nav" class:open={mobileMenuOpen}>
         {#if $isLoggedIn}
-          {#if $isSeller}
+          {#if $isAdmin}
+            <a href="#/admin/dashboard" class="nav-link" class:active={route === '#/admin/dashboard'} on:click|preventDefault={() => navigate('#/admin/dashboard')}>판매자 관리</a>
+            <a href="#/admin/stores" class="nav-link" class:active={route === '#/admin/stores'} on:click|preventDefault={() => navigate('#/admin/stores')}>매장 목록</a>
+          {:else if $isSeller}
             <a href="#/seller/dashboard" class="nav-link" class:active={route === '#/seller/dashboard'} on:click|preventDefault={() => navigate('#/seller/dashboard')}>대시보드</a>
             <a href="#/seller/store" class="nav-link" class:active={route === '#/seller/store'} on:click|preventDefault={() => navigate('#/seller/store')}>매장관리</a>
             <a href="#/seller/products" class="nav-link" class:active={route === '#/seller/products'} on:click|preventDefault={() => navigate('#/seller/products')}>상품관리</a>
             <a href="#/seller/inventory" class="nav-link" class:active={route === '#/seller/inventory'} on:click|preventDefault={() => navigate('#/seller/inventory')}>재고관리</a>
             <a href="#/seller/orders" class="nav-link" class:active={route === '#/seller/orders'} on:click|preventDefault={() => navigate('#/seller/orders')}>주문현황</a>
           {:else}
-            <a href="#/buyer/stores" class="nav-link" class:active={route === '#/buyer/stores'} on:click|preventDefault={() => navigate('#/buyer/stores')}>매장목록</a>
             <a href="#/buyer/orders" class="nav-link" class:active={route === '#/buyer/orders'} on:click|preventDefault={() => navigate('#/buyer/orders')}>주문내역</a>
             <a href="#/buyer/cart" class="nav-link cart-link" class:active={route === '#/buyer/cart'} on:click|preventDefault={() => navigate('#/buyer/cart')}>
               장바구니
@@ -64,7 +91,7 @@
 
           <div class="user-info">
             <span class="user-name">{$user?.name}님</span>
-            <span class="user-role badge">{$user?.role === 'SELLER' ? '판매자' : '구매자'}</span>
+            <span class="user-role badge">{$user?.role === 'ADMIN' ? '관리자' : $user?.role === 'SELLER' ? '판매자' : '구매자'}</span>
             <button class="btn btn-sm btn-outline" on:click={logout}>로그아웃</button>
           </div>
         {:else}
@@ -73,6 +100,12 @@
       </nav>
     </div>
   </header>
+
+  <!-- Mobile menu backdrop -->
+  <div class="menu-backdrop" class:open={mobileMenuOpen}
+       on:click={() => mobileMenuOpen = false}
+       on:keypress={() => mobileMenuOpen = false}
+       role="button" tabindex="-1"></div>
 
   <!-- Main Content -->
   <main class="main">
@@ -92,8 +125,10 @@
       <SellerInventory {navigate} />
     {:else if route === '#/seller/orders'}
       <SellerOrders {navigate} />
-    {:else if route === '#/buyer/stores'}
-      <BuyerStores {navigate} />
+    {:else if route === '#/admin/dashboard'}
+      <AdminDashboard {navigate} />
+    {:else if route === '#/admin/stores'}
+      <AdminStores {navigate} />
     {:else if route.startsWith('#/buyer/store/')}
       <BuyerStoreDetail {navigate} {params} storeId={route.split('/')[3]} />
     {:else if route === '#/buyer/cart'}
@@ -416,5 +451,77 @@
     padding: 20px;
     font-size: 13px;
     margin-top: auto;
+  }
+
+  .menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 4px 8px;
+    color: #333;
+  }
+
+  .menu-backdrop {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+    .menu-toggle {
+      display: block;
+    }
+
+    .nav {
+      display: none;
+      position: absolute;
+      top: 64px;
+      left: 0;
+      right: 0;
+      background: white;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0;
+      padding: 8px 0;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      z-index: 101;
+    }
+
+    .nav.open {
+      display: flex;
+    }
+
+    .menu-backdrop.open {
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.3);
+      z-index: 99;
+    }
+
+    .nav-link {
+      padding: 14px 20px;
+      border-radius: 0;
+      border-bottom: 1px solid #f5f5f5;
+    }
+
+    .user-info {
+      margin-left: 0;
+      padding-left: 0;
+      border-left: none;
+      padding: 14px 20px;
+      border-top: 1px solid #eee;
+    }
+
+    :global(.container) {
+      padding: 0 12px;
+    }
+
+    :global(.page-title) {
+      font-size: 20px;
+    }
   }
 </style>

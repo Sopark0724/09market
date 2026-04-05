@@ -36,7 +36,7 @@
       const res = await api.post('/auth/phone/verify', { phone, code });
       if (res.registered) {
         user.login(res.user, res.token);
-        navigate(res.user.role === 'SELLER' ? '#/seller/dashboard' : '#/buyer/stores');
+        navigate(res.user.role === 'ADMIN' ? '#/admin/dashboard' : res.user.role === 'SELLER' ? '#/seller/dashboard' : '#/buyer/orders');
       } else {
         navigate('#/register?phone=' + phone + '&provider=PHONE');
       }
@@ -56,7 +56,7 @@
       const res = await api.post('/auth/kakao', { accessToken: mockToken });
       if (res.registered) {
         user.login(res.user, res.token);
-        navigate(res.user.role === 'SELLER' ? '#/seller/dashboard' : '#/buyer/stores');
+        navigate(res.user.role === 'ADMIN' ? '#/admin/dashboard' : res.user.role === 'SELLER' ? '#/seller/dashboard' : '#/buyer/orders');
       } else {
         navigate('#/register?kakaoId=' + res.kakaoId + '&email=' + res.email + '&name=' + res.name + '&provider=KAKAO');
       }
@@ -72,12 +72,12 @@
     loading = true;
     error = '';
     try {
-      const testPhone = role === 'SELLER' ? '01012345678' : '01011112222';
+      const testPhone = role === 'ADMIN' ? '01099999999' : role === 'SELLER' ? '01012345678' : '01011112222';
       await api.post('/auth/phone/send', { phone: testPhone });
       const res = await api.post('/auth/phone/verify', { phone: testPhone, code: '123456' });
       if (res.registered) {
         user.login(res.user, res.token);
-        navigate(res.user.role === 'SELLER' ? '#/seller/dashboard' : '#/buyer/stores');
+        navigate(res.user.role === 'ADMIN' ? '#/admin/dashboard' : res.user.role === 'SELLER' ? '#/seller/dashboard' : '#/buyer/orders');
       }
     } catch (e) {
       error = e.message;
@@ -105,6 +105,9 @@
           </button>
           <button class="btn btn-outline" on:click={() => quickLogin('BUYER')} disabled={loading}>
             구매자 (박구매)
+          </button>
+          <button class="btn btn-outline" on:click={() => quickLogin('ADMIN')} disabled={loading}>
+            관리자
           </button>
         </div>
       </div>
@@ -270,5 +273,23 @@
 
   .kakao-btn:hover {
     background: #FDD835;
+  }
+
+  @media (max-width: 640px) {
+    .login-card {
+      padding: 24px 16px;
+    }
+
+    .quick-buttons {
+      flex-direction: column;
+    }
+
+    .auth-tabs {
+      flex-direction: column;
+    }
+
+    .input-group {
+      flex-direction: column;
+    }
   }
 </style>

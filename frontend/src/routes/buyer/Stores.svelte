@@ -20,7 +20,7 @@
 </script>
 
 <div class="container">
-  <h1 class="page-title">🏪 매장 목록</h1>
+  <h1 class="page-title">매장 관리 (Admin)</h1>
 
   {#if error}
     <div class="alert alert-error">{error}</div>
@@ -115,5 +115,19 @@
     text-align: center;
     padding: 48px;
     color: #999;
+  }
+
+  @media (max-width: 640px) {
+    .store-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .store-card {
+      padding: 16px;
+    }
+
+    .store-header h3 {
+      font-size: 16px;
+    }
   }
 </style>

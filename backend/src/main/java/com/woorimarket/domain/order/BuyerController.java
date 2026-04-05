@@ -60,6 +60,13 @@ public class BuyerController {
         return ResponseEntity.ok(orderService.getBuyerOrders(user.getId()));
     }
 
+    @PutMapping("/orders/{id}/cancel")
+    public ResponseEntity<OrderResponse> cancelOrder(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(orderService.cancelOrder(id, user.getId()));
+    }
+
     @GetMapping("/orders/{id}")
     public ResponseEntity<OrderResponse> getOrderDetail(
             @AuthenticationPrincipal User user,

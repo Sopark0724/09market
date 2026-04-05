@@ -243,4 +243,29 @@
   .empty p {
     margin-bottom: 16px;
   }
+
+  @media (max-width: 640px) {
+    .cart-item {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .item-info {
+      width: 100%;
+    }
+
+    .item-subtotal {
+      min-width: auto;
+    }
+
+    .cart-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+
+    .total-amount {
+      font-size: 20px;
+    }
+  }
 </style>

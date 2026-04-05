@@ -31,6 +31,7 @@ public class ProductService {
                 .description(request.getDescription())
                 .unit(request.getUnit())
                 .imageUrl(request.getImageUrl())
+                .detailImages(request.getDetailImages())
                 .category(request.getCategory())
                 .active(true)
                 .build();
@@ -51,6 +52,7 @@ public class ProductService {
         product.setDescription(request.getDescription());
         product.setUnit(request.getUnit());
         product.setImageUrl(request.getImageUrl());
+        product.setDetailImages(request.getDetailImages());
         product.setCategory(request.getCategory());
 
         product = productRepository.save(product);

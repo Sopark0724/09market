@@ -25,7 +25,7 @@
     try {
       const res = await api.post('/auth/register', form);
       user.login(res.user, res.token);
-      navigate(res.user.role === 'SELLER' ? '#/seller/store' : '#/buyer/stores');
+      navigate(res.user.role === 'SELLER' ? '#/seller/store' : '#/buyer/orders');
     } catch (e) {
       error = e.message;
     } finally {
@@ -65,7 +65,7 @@
         <div class="role-selector">
           <button class="role-btn" class:active={form.role === 'BUYER'}
                   on:click={() => form.role = 'BUYER'}>
-            <span class="role-icon">���</span>
+            <span class="role-icon">🛒</span>
             <span class="role-label">구매자</span>
             <span class="role-desc">상품을 주문하고 구매합니다</span>
           </button>
@@ -136,5 +136,15 @@
   .role-desc {
     font-size: 12px;
     color: #999;
+  }
+
+  @media (max-width: 640px) {
+    .register-card {
+      padding: 24px 16px;
+    }
+
+    .role-selector {
+      flex-direction: column;
+    }
   }
 </style>

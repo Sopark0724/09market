@@ -24,6 +24,7 @@ public class OrderResponse {
     private String status;
     private List<OrderItemResponse> items;
     private LocalDateTime createdAt;
+    private String notificationMessage;
 
     @Data
     @Builder
